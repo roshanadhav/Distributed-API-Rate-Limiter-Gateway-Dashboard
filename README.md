@@ -1018,7 +1018,6 @@ Every instance observes identical state.
 **Part 3** will cover the complete **Load Balancer implementation**, including every routing algorithm (Round Robin, Weighted Round Robin, Least Connections, Least Response Time, Random, IP Hash, Consistent Hashing), mathematical intuition, complexity analysis, advantages, disadvantages, and implementation snippets extracted in a production-style explanation.
 
 
-````markdown id="pt3-load-balancer"
 
 ---
 
@@ -1720,10 +1719,7 @@ traffic distribution live.
 - Time & Space Complexity Table
 - Best Use Cases for Each Strategy
 
-````
 
-
-````markdown id="part-4-health-routing"
 
 ---
 
@@ -2539,10 +2535,7 @@ traffic characteristics.
 - API Design
 - Code snippets from the implementation
 
-````
 
-
-````markdown id="part-5-rate-limiter"
 
 ---
 
@@ -3333,8 +3326,6 @@ systems.
 
 This will complete the full README.
 
-````
-
 
 
 ---
@@ -3935,11 +3926,11 @@ the terms of the license.
 Software Engineering Intern | Distributed Systems | Backend Engineering |
 System Design | Node.js | Redis | React
 
-GitHub: https://github.com/roshanadhav
+GitHub: https://github.com/<your-username>
 
-LinkedIn: https://linkedin.com/in/roshanadhav
+LinkedIn: https://linkedin.com/in/<your-profile>
 
-Portfolio: will update soon
+Portfolio: https://<your-portfolio>
 
 ---
 
