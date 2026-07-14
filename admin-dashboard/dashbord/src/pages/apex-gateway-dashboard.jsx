@@ -690,7 +690,7 @@ const Sidebar = ({ page, setPage, collapsed, setCollapsed }) => (
     <div className="gw-sidebar-logo">
       <div className="gw-logo-mark">AG</div>
       <div>
-        <div className="gw-logo-text">Apex Gateway</div>
+        <div className="gw-logo-text"></div>
         <div className="gw-logo-sub">CONTROL CENTER</div>
       </div>
     </div>
