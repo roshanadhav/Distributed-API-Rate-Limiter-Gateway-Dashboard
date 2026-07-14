@@ -3926,11 +3926,11 @@ the terms of the license.
 Software Engineering Intern | Distributed Systems | Backend Engineering |
 System Design | Node.js | Redis | React
 
-GitHub: https://github.com/<your-username>
+GitHub: https://github.com/roshanadhav
 
-LinkedIn: https://linkedin.com/in/<your-profile>
+LinkedIn: https://linkedin.com/in/roshanadhav
 
-Portfolio: https://<your-portfolio>
+Portfolio: coming soon
 
 ---
 
