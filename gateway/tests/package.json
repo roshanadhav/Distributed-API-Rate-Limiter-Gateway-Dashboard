@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "test:rate": "node tests/load/rateLimiter.test.js",
+    "test:gateway": "node tests/load/gateway.test.js",
+    "test:lb": "node tests/load/loadBalancer.test.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.1"
+  }
+}
