@@ -774,7 +774,7 @@ const Topbar = ({ rps, activeServices, unread, theme, setTheme, notifOpen, setNo
       <div className="gw-profile" onClick={() => setPage("users")}>
         <div className="gw-avatar">SA</div>
         <div>
-          <div className="gw-profile-name">Sam Ardley</div>
+          <div className="gw-profile-name">Roshan Adhav</div>
           <div className="gw-profile-role">Platform Admin</div>
         </div>
         <ChevronDown size={13} color="var(--text-faint)" />
