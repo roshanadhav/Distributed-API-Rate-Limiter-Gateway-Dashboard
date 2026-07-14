@@ -1935,7 +1935,7 @@ const NotificationsPage = ({ engine }) => {
    USERS PAGE
 ============================================================================ */
 const USER_SEED = [
-  { name: "Sam Ardley", email: "sam.ardley@apexgw.io", role: "Platform Admin", status: "active", lastActive: "Active now" },
+  { name: "Roshan Adhav", email: "sam.ardley@apexgw.io", role: "Platform Admin", status: "active", lastActive: "Active now" },
   { name: "Priya Nandan", email: "priya.nandan@apexgw.io", role: "SRE", status: "active", lastActive: "12 min ago" },
   { name: "Marcus Webb", email: "marcus.webb@apexgw.io", role: "SRE", status: "active", lastActive: "1 hr ago" },
   { name: "Elena Cho", email: "elena.cho@apexgw.io", role: "Read Only", status: "active", lastActive: "3 hr ago" },
