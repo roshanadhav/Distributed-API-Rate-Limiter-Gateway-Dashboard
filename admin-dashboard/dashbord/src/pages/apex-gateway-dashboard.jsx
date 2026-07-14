@@ -688,7 +688,7 @@ const PAGE_META = {
 const Sidebar = ({ page, setPage, collapsed, setCollapsed }) => (
   <div className={`gw-sidebar ${collapsed ? "collapsed" : ""}`} style={{ width: collapsed ? 68 : 224 }}>
     <div className="gw-sidebar-logo">
-      <div className="gw-logo-mark">AG</div>
+      <div className="gw-logo-mark">G</div>
       <div>
         <div className="gw-logo-text"></div>
         <div className="gw-logo-sub">CONTROL CENTER</div>
@@ -772,7 +772,7 @@ const Topbar = ({ rps, activeServices, unread, theme, setTheme, notifOpen, setNo
         </AnimatePresence>
       </div>
       <div className="gw-profile" onClick={() => setPage("users")}>
-        <div className="gw-avatar">SA</div>
+        <div className="gw-avatar">RA</div>
         <div>
           <div className="gw-profile-name">Roshan Adhav</div>
           <div className="gw-profile-role">Platform Admin</div>

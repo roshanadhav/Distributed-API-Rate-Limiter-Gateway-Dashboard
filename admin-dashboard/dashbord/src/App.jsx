@@ -688,7 +688,7 @@ const PAGE_META = {
 const Sidebar = ({ page, setPage, collapsed, setCollapsed }) => (
   <div className={`gw-sidebar ${collapsed ? "collapsed" : ""}`} style={{ width: collapsed ? 68 : 224 }}>
     <div className="gw-sidebar-logo">
-      <div className="gw-logo-mark">AG</div>
+      <div className="gw-logo-mark">G</div>
       <div>
         <div className="gw-logo-text">Gateway</div>
         <div className="gw-logo-sub">CONTROL CENTER</div>
