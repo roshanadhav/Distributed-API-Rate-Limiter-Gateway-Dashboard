@@ -22,6 +22,20 @@ services:
       - distributed-gateway-network
     restart: unless-stopped
 
+  gateway-dashboard:
+    build:
+      context: ./gateway-dashboard
+      dockerfile: Dockerfile
+    container_name: gateway-dashboard
+    ports:
+      - "5173:5173"
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - gateway
+    networks:
+      - distributed-gateway-network
+    restart: unless-stopped
 
   admin-service:
     build:
@@ -39,7 +53,6 @@ services:
       - distributed-gateway-network
     restart: unless-stopped
 
-
   auth-service:
     build:
       context: ./services/auth-service
@@ -55,7 +68,6 @@ services:
     networks:
       - distributed-gateway-network
     restart: unless-stopped
-
 
   user-service:
     build:
@@ -74,7 +86,6 @@ services:
       - distributed-gateway-network
     restart: unless-stopped
 
-
   user-service-2:
     build:
       context: ./services/user-service-2
@@ -89,7 +100,6 @@ services:
       - distributed-gateway-network
     restart: unless-stopped
 
-
   user-service-3:
     build:
       context: ./services/user-service-3
@@ -103,8 +113,6 @@ services:
     networks:
       - distributed-gateway-network
     restart: unless-stopped
-
-
 
 networks:
   distributed-gateway-network:

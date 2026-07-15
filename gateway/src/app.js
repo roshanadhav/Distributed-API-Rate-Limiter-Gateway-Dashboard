@@ -6,13 +6,12 @@ import SlidingWindow from "./services/rateLimiter/slidingWindow.js";
 import LoadBalancer from "./services/loadBalancer/index.js";
 
 
-
-
 client.on('error' , err=> console.log(err)) ; 
 
 await client.connect()
 .then(()=>console.log("RADIS CONNECTION TO RADIS CLIENT SUCCESSFUL")) 
 .catch(e=>console.log(e)) ; 
+
 
 
 const loadBalancer = new LoadBalancer() ; 
