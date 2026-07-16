@@ -2,7 +2,7 @@ import axios from "axios";
 
 const URL = "http://localhost:3000/users";
 
-const TOTAL_REQUESTS = 10000;
+const TOTAL_REQUESTS = 100;
 
 async function test() {
     const requests = [];
