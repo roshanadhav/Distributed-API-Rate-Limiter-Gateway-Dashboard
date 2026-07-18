@@ -647,4 +647,248 @@ app.get("/admin/services/:id", async (req, res) => {
 
 */
 
+
+app.get("/admin/load-balancer", async (req, res) => {
+
+    try {
+
+        const loadBalancer = JSON.parse(
+            await client.get("gateway:loadbalancer")
+        );
+
+        const runtime = JSON.parse(
+            await client.get("dynamic-server-config")
+        );
+
+        const servers = Object.values(runtime).map(server => ({
+
+            id: server.id,
+
+            serviceName: server.serviceName,
+
+            url: server.url,
+
+            healthy: server.healthy,
+
+            status: server.status,
+
+            activeConnections: server.activeConnections,
+
+            responseTime: server.responseTime,
+
+            averageLatency: server.averageLatency,
+
+            totalRequests: server.totalRequests,
+
+            selectedCount: server.selectedCount,
+
+            distribution:
+                loadBalancer.distribution[server.id] || 0,
+
+            lastSelected: server.lastSelected
+
+        }));
+
+        return res.status(200).json({
+
+            success: true,
+
+            data: {
+
+                enabled: loadBalancer.enabled,
+
+                algorithm: loadBalancer.algorithm,
+
+                totalForwarded:
+                    loadBalancer.total_forwarded,
+
+                distribution:
+                    loadBalancer.distribution,
+
+                servers
+
+            }
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Unable to fetch load balancer information"
+
+        });
+
+    }
+
+});
+
+/*
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "algorithm": "Least Connections",
+    "totalForwarded": 42193,
+    "distribution": {
+      "user-service": 12000,
+      "user-service-2": 9800,
+      "user-service-3": 10100,
+      "auth-service": 10293
+    },
+    "servers": [
+      {
+        "id": "user-service",
+        "serviceName": "User Service",
+        "url": "http://localhost:5001",
+        "healthy": true,
+        "status": "UP",
+        "activeConnections": 2,
+        "responseTime": 12,
+        "averageLatency": 14,
+        "totalRequests": 12000,
+        "selectedCount": 12000,
+        "distribution": 12000,
+        "lastSelected": 1721160211
+      }
+    ]
+  }
+}
+
+*/
+
+app.get("/admin/rate-limiter", async (req, res) => {
+
+    try {
+
+        const [
+            rateLimiter,
+            metrics
+        ] = await Promise.all([
+            client.get("gateway:ratelimiter"),
+            client.get("rl:metrics")
+        ]);
+
+        const rl = JSON.parse(rateLimiter);
+        const rlMetrics = JSON.parse(metrics);
+
+        const totalRequests =
+            rl.allowed_requests +
+            rl.blocked_requests;
+
+        const successRate =
+            totalRequests === 0
+                ? 100
+                : Number(
+                      (
+                          rl.allowed_requests /
+                          totalRequests
+                      ) * 100
+                  ).toFixed(2);
+
+        return res.status(200).json({
+
+            success: true,
+
+            data: {
+
+                enabled: rl.enabled,
+
+                algorithm: rl.algorithm,
+
+                limit: rl.limit,
+
+                windowMs: rl.window_ms,
+
+                allowedRequests:
+                    rl.allowed_requests,
+
+                blockedRequests:
+                    rl.blocked_requests,
+
+                totalRequests,
+
+                successRate,
+
+                lastBlockedIp:
+                    rl.last_blocked_ip,
+
+                lastBlockedAt:
+                    rl.last_blocked_at,
+
+                algorithms: {
+
+                    fixedWindow:
+                        rlMetrics.fixed_window,
+
+                    slidingWindow:
+                        rlMetrics.sliding_window,
+
+                    tokenBucket:
+                        rlMetrics.token_bucket,
+
+                    leakyBucket:
+                        rlMetrics.leaky_bucket
+
+                }
+
+            }
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        return res.status(500).json({
+
+            success: false,
+
+            message:
+                "Unable to fetch rate limiter information"
+
+        });
+
+    }
+
+});
+
+
+/*
+
+
+*/
+
+
+app.get("/admin/redis", async (req, res) => {
+  try {
+    const keys = await client.keys("*");
+
+    const data = {};
+
+    for (const key of keys) {
+      data[key] = await client.get(key);
+    }
+
+    res.json({
+      success: true,
+      count: keys.length,
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+});
+
+
 export default app ; 

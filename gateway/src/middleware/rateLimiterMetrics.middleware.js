@@ -19,7 +19,7 @@ async function saveRateLimiter(data) {
 
 async function getGatewayMetrics() {
     return JSON.parse(
-        await client.get("gateway:metrics")
+        await client.get("rl:metrics")
     );
 }
 
@@ -51,13 +51,13 @@ export const onAllowed = async (algorithm) => {
 
     try {
 
-        const rl = await getRateLimiter();
+        // Atomic increment
+        await client.incr(
+            "gateway:rl:allowed_requests"
+        );
 
-        rl.allowed_requests++;
-
-        await saveRateLimiter(rl);
-
-        const metrics = await getRLMetrics();
+        const metrics =
+            await getRLMetrics();
 
         switch (algorithm) {
 
@@ -103,9 +103,13 @@ export const onBlocked = async (
 
     try {
 
-        const rl = await getRateLimiter();
+        // Atomic increment
+        await client.incr(
+            "gateway:rl:blocked_requests"
+        );
 
-        rl.blocked_requests++;
+        const rl =
+            await getRateLimiter();
 
         rl.last_blocked_ip = ip;
 
@@ -113,13 +117,8 @@ export const onBlocked = async (
 
         await saveRateLimiter(rl);
 
-        const gateway =
-            await getGatewayMetrics();
-
-        gateway.rate_limited_requests++;
-
-        await saveGatewayMetrics(
-            gateway
+        await client.incr(
+            "gateway:rate_limited_requests"
         );
 
         const metrics =

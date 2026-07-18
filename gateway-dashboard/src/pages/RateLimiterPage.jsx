@@ -1,158 +1,590 @@
-import React, { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 import {
-  ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
 } from "recharts";
-import { Gauge, CheckCircle2, XCircle, Zap, AlertTriangle } from "lucide-react";
+import {
+  Gauge,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
+
 import { useEngine } from "../context/EngineContext.jsx";
+
 import StatCard from "../components/ui/StatCard.jsx";
 import SectionCard from "../components/ui/SectionCard.jsx";
 import ProgressBar from "../components/ui/ProgressBar.jsx";
 import ChartTooltip from "../components/ui/ChartTooltip.jsx";
+import {
+  LoadingState,
+  UnreachableState,
+} from "../components/ui/ConnectionState.jsx";
+
 import { RL_ALGORITHMS } from "../lib/constants.js";
-import { fmtCompact, uid } from "../lib/utils.js";
+import { fmtCompact, fmtNum } from "../lib/utils.js";
+
+function normalizeAlgoName(name) {
+  return (name || "").toLowerCase().replace(/\s+/g, "-");
+}
 
 export default function RateLimiterPage() {
-  const { rlAlgorithm, setRlAlgorithm, bucket, metrics } = useEngine();
-  const [rejects, setRejects] = useState([]);
-  const prevTokens = useRef(bucket.tokens);
+  const {
+    rateLimiter,
+    history,
+    connection,
+    connectionError,
+    refreshNow,
+  } = useEngine();
 
-  useEffect(() => {
-    if (bucket.tokens <= 1 && prevTokens.current > 1) {
-      const id = uid();
-      setRejects((r) => [...r.slice(-8), id]);
-      setTimeout(() => setRejects((r) => r.filter((x) => x !== id)), 1200);
-    }
-    prevTokens.current = bucket.tokens;
-  }, [bucket.tokens]);
+  if (connection === "connecting" && !rateLimiter)
+    return <LoadingState />;
 
-  const current = RL_ALGORITHMS.find((a) => a.id === rlAlgorithm);
-  const fillPct = (bucket.tokens / bucket.capacity) * 100;
-  const total = bucket.allowed + bucket.blocked;
-  const blockRate = ((bucket.blocked / Math.max(1, total)) * 100).toFixed(2);
+  if (connection === "error" && !rateLimiter)
+    return (
+      <UnreachableState
+        onRetry={refreshNow}
+        error={connectionError}
+      />
+    );
+
+  const rl = rateLimiter || {};
+
+  const algorithmId = normalizeAlgoName(
+    rl.algorithm
+  );
+
+  const current = RL_ALGORITHMS.find(
+    (a) => a.id === algorithmId
+  );
+
+  const total = rl.totalRequests ?? 0;
+
+  const blockRate =
+    total > 0
+      ? (
+          (rl.blockedRequests / total) *
+          100
+        ).toFixed(2)
+      : "0.00";
+
+  const allowedPct =
+    total > 0
+      ? (rl.allowedRequests / total) * 100
+      : 100;
 
   return (
     <div>
       <div className="gw-page-head">
         <div>
-          <div className="gw-page-title">Rate Limiter</div>
-          <div className="gw-page-sub">Request throttling engine and algorithm configuration.</div>
+          <div className="gw-page-title">
+            Rate Limiter
+          </div>
+
+          <div className="gw-page-sub">
+            Live request throttling reported by
+            the gateway.
+          </div>
         </div>
-        <span className="gw-badge info"><Gauge size={11} /> {current.name}</span>
+
+        <span className="gw-badge info">
+          <Gauge size={11} />
+          {rl.algorithm || "Unknown"}
+        </span>
       </div>
 
-      <div className="gw-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 16 }}>
-        <StatCard icon={CheckCircle2} label="Requests Allowed" value={fmtCompact(bucket.allowed)} tint="var(--success)" />
-        <StatCard icon={XCircle} label="Requests Blocked" value={fmtCompact(bucket.blocked)} tint="var(--danger)" />
-        <StatCard icon={Zap} label="Remaining Tokens" value={Math.round(bucket.tokens)} unit={`/ ${bucket.capacity}`} tint="var(--accent)" />
-        <StatCard icon={AlertTriangle} label="Block Rate" value={blockRate} unit="%" tint="var(--warn)" />
+      <div
+        className="gw-grid"
+        style={{
+          gridTemplateColumns:
+            "repeat(4, 1fr)",
+          marginBottom: 16,
+        }}
+      >
+        <StatCard
+          icon={CheckCircle2}
+          label="Requests Allowed"
+          value={fmtCompact(
+            rl.allowedRequests ?? 0
+          )}
+          tint="var(--success)"
+        />
+
+        <StatCard
+          icon={XCircle}
+          label="Requests Blocked"
+          value={fmtCompact(
+            rl.blockedRequests ?? 0
+          )}
+          tint="var(--danger)"
+        />
+
+        <StatCard
+          icon={Clock}
+          label="Limit"
+          value={rl.limit ?? "—"}
+          unit={
+            rl.windowMs
+              ? `/ ${rl.windowMs}s`
+              : ""
+          }
+          tint="var(--accent)"
+        />
+
+        <StatCard
+          icon={AlertTriangle}
+          label="Block Rate"
+          value={blockRate}
+          unit="%"
+          tint="var(--warn)"
+        />
       </div>
 
-      <div className="gw-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 16 }}>
-        <SectionCard eyebrow="Live Visualization" title="Token Bucket">
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 26, padding: "10px 6px 4px" }}>
-            <div style={{ position: "relative", width: 110, height: 160, flexShrink: 0 }}>
-              <svg width="110" height="160" viewBox="0 0 110 160">
-                <path d="M10,10 L100,10 L92,152 L18,152 Z" fill="var(--surface-2)" stroke="var(--border)" strokeWidth="1.6" />
-                <clipPath id="bucket-clip">
-                  <path d="M12,12 L98,12 L91,150 L19,150 Z" />
-                </clipPath>
-                <motion.rect
-                  x="10"
-                  width="90"
-                  fill="var(--accent)"
-                  opacity="0.55"
-                  clipPath="url(#bucket-clip)"
-                  animate={{ y: 150 - (fillPct / 100) * 138, height: (fillPct / 100) * 138 + 12 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-                <text x="55" y="85" textAnchor="middle" fontSize="18" fontWeight="700" fill="var(--text)" fontFamily="var(--font-mono)">
-                  {Math.round(bucket.tokens)}
-                </text>
-                <text x="55" y="100" textAnchor="middle" fontSize="9" fill="var(--text-faint)" fontFamily="var(--font-mono)">
-                  tokens
-                </text>
-              </svg>
-              <AnimatePresence>
-                {rejects.map((id) => (
-                  <motion.div
-                    key={id}
-                    initial={{ opacity: 1, x: 0, y: 40 }}
-                    animate={{ opacity: 0, x: 60, y: 10 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.1 }}
-                    style={{ position: "absolute", left: 6, top: 30, fontSize: 10, color: "var(--danger)", fontFamily: "var(--font-mono)", fontWeight: 700 }}
-                  >
-                    ✕ 429
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+      <div
+        className="gw-grid"
+        style={{
+          gridTemplateColumns: "1fr 1fr",
+          marginBottom: 16,
+        }}
+      >
+        <SectionCard
+          eyebrow="Live Visualization"
+          title="Allowed vs Blocked"
+        >
+          <div
+            style={{
+              padding: "10px 6px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 12,
+                color: "var(--text-dim)",
+                marginBottom: 14,
+              }}
+            >
+              Configured limit:{" "}
+              <strong
+                className="gw-mono"
+                style={{
+                  color: "var(--text)",
+                }}
+              >
+                {rl.limit ?? "—"} requests
+              </strong>{" "}
+              per{" "}
+              <strong
+                className="gw-mono"
+                style={{
+                  color: "var(--text)",
+                }}
+              >
+                {rl.windowMs ?? "—"}s
+              </strong>{" "}
+              window, enforced with{" "}
+              <strong
+                style={{
+                  color: "var(--text)",
+                }}
+              >
+                {rl.algorithm ||
+                  "an unconfigured algorithm"}
+              </strong>
+              .
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: "var(--text-dim)", marginBottom: 10 }}>
-                Bucket refills at <strong className="gw-mono" style={{ color: "var(--text)" }}>{bucket.refillRate} tokens/sec</strong>. Each request consumes
-                one token; when the bucket is empty, incoming requests are rejected with <span className="gw-mono">HTTP 429</span>.
-              </div>
-              <ProgressBar value={fillPct} color={fillPct < 15 ? "var(--danger)" : fillPct < 40 ? "var(--warn)" : "var(--accent)"} />
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10.5, color: "var(--text-faint)" }}>
-                <span>0</span>
-                <span>capacity {bucket.capacity}</span>
-              </div>
-              <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
-                <div>
-                  <div className="gw-mono" style={{ fontSize: 18, fontWeight: 700, color: "var(--success)" }}>{fmtCompact(bucket.allowed)}</div>
-                  <div style={{ fontSize: 10.5, color: "var(--text-faint)" }}>Allowed</div>
+
+            <ProgressBar
+              value={allowedPct}
+              color={
+                allowedPct > 85
+                  ? "var(--success)"
+                  : allowedPct > 60
+                  ? "var(--warn)"
+                  : "var(--danger)"
+              }
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                marginTop: 4,
+                fontSize: 10.5,
+                color:
+                  "var(--text-faint)",
+              }}
+            >
+              <span>
+                {allowedPct.toFixed(1)}%
+                allowed
+              </span>
+
+              <span>
+                {(
+                  100 - allowedPct
+                ).toFixed(1)}
+                % blocked
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                marginTop: 20,
+              }}
+            >
+              <div>
+                <div
+                  className="gw-mono"
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color:
+                      "var(--success)",
+                  }}
+                >
+                  {fmtCompact(
+                    rl.allowedRequests ?? 0
+                  )}
                 </div>
-                <div>
-                  <div className="gw-mono" style={{ fontSize: 18, fontWeight: 700, color: "var(--danger)" }}>{fmtCompact(bucket.blocked)}</div>
-                  <div style={{ fontSize: 10.5, color: "var(--text-faint)" }}>Blocked</div>
+
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Allowed
+                </div>
+              </div>
+
+              <div>
+                <div
+                  className="gw-mono"
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color:
+                      "var(--danger)",
+                  }}
+                >
+                  {fmtCompact(
+                    rl.blockedRequests ?? 0
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Blocked
+                </div>
+              </div>
+            </div>
+
+            {/* Real Request Details */}
+
+            <div
+              style={{
+                marginTop: 22,
+                paddingTop: 14,
+                borderTop:
+                  "1px solid var(--border-soft)",
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(2,1fr)",
+                gap: 12,
+                fontSize: 11.5,
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Total Requests
+                </div>
+
+                <div className="gw-mono">
+                  {fmtCompact(
+                    rl.totalRequests ?? 0
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Success Rate
+                </div>
+
+                <div
+                  className="gw-mono"
+                  style={{
+                    color:
+                      "var(--success)",
+                  }}
+                >
+                  {rl.successRate ?? 0}%
+                </div>
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Last Blocked IP
+                </div>
+
+                <div className="gw-mono">
+                  {rl.lastBlockedIp ||
+                    "—"}
+                </div>
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Last Blocked At
+                </div>
+
+                <div className="gw-mono">
+                  {rl.lastBlockedAt
+                    ? new Date(
+                        rl.lastBlockedAt
+                      ).toLocaleString()
+                    : "—"}
                 </div>
               </div>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="Configuration" title="Limiting Algorithm">
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <SectionCard
+          eyebrow="Configuration"
+          title="Algorithm Reference"
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+            }}
+          >
             {RL_ALGORITHMS.map((a) => (
               <div
                 key={a.id}
-                onClick={() => setRlAlgorithm(a.id)}
                 style={{
-                  padding: "10px 12px", borderRadius: 9, cursor: "pointer",
-                  border: `1px solid ${a.id === rlAlgorithm ? "var(--accent)" : "var(--border-soft)"}`,
-                  background: a.id === rlAlgorithm ? "var(--accent-soft)" : "transparent",
+                  padding:
+                    "10px 12px",
+                  borderRadius: 9,
+                  border: `1px solid ${
+                    a.id === algorithmId
+                      ? "var(--accent)"
+                      : "var(--border-soft)"
+                  }`,
+                  background:
+                    a.id === algorithmId
+                      ? "var(--accent-soft)"
+                      : "transparent",
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700, color: a.id === rlAlgorithm ? "var(--accent)" : "var(--text)" }}>{a.name}</span>
-                  {a.id === rlAlgorithm && <CheckCircle2 size={14} color="var(--accent)" />}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems:
+                      "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color:
+                        a.id ===
+                        algorithmId
+                          ? "var(--accent)"
+                          : "var(--text)",
+                    }}
+                  >
+                    {a.name}
+                  </span>
+
+                  {a.id ===
+                    algorithmId && (
+                    <span className="gw-badge healthy">
+                      Active
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: 11.5, color: "var(--text-dim)", marginBottom: 6 }}>{a.desc}</div>
-                <div style={{ display: "flex", gap: 10, fontSize: 10.8 }}>
-                  <span style={{ color: "var(--success)" }}>+ {a.pro}</span>
+
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    color:
+                      "var(--text-dim)",
+                    marginBottom: 6,
+                  }}
+                >
+                  {a.desc}
                 </div>
-                <div style={{ fontSize: 10.8, color: "var(--danger)" }}>− {a.con}</div>
+
+                <div
+                  style={{
+                    fontSize: 10.8,
+                    color:
+                      "var(--success)",
+                  }}
+                >
+                  + {a.pro}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 10.8,
+                    color:
+                      "var(--danger)",
+                  }}
+                >
+                  − {a.con}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 10.5,
+                    color:
+                      "var(--text-faint)",
+                  }}
+                >
+                  Requests Processed:{" "}
+                  <strong>
+                    {fmtNum(
+                      a.id ===
+                        "fixed-window"
+                        ? rl
+                            .algorithms
+                            ?.fixedWindow ??
+                            0
+                        : a.id ===
+                          "sliding-window"
+                        ? rl
+                            .algorithms
+                            ?.slidingWindow ??
+                          0
+                        : a.id ===
+                          "token-bucket"
+                        ? rl
+                            .algorithms
+                            ?.tokenBucket ??
+                          0
+                        : rl
+                            .algorithms
+                            ?.leakyBucket ??
+                          0
+                    )}
+                  </strong>
+                </div>
               </div>
             ))}
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard eyebrow="Traffic" title="Requests: Allowed vs Blocked">
-        <ResponsiveContainer width="100%" height={190}>
-          <AreaChart data={metrics}>
+      <SectionCard
+        eyebrow="Traffic"
+        title="Rate Limited Requests (per poll interval)"
+      >
+        <ResponsiveContainer
+          width="100%"
+          height={190}
+        >
+          <AreaChart data={history}>
             <defs>
-              <linearGradient id="rl-lim" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--warn)" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="var(--warn)" stopOpacity={0} />
+              <linearGradient
+                id="rl-lim"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="var(--warn)"
+                  stopOpacity={0.4}
+                />
+
+                <stop
+                  offset="100%"
+                  stopColor="var(--warn)"
+                  stopOpacity={0}
+                />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="var(--border-soft)" vertical={false} />
-            <XAxis dataKey="time" stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} minTickGap={30} />
-            <YAxis stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} width={30} />
-            <Tooltip content={<ChartTooltip />} />
-            <Area type="monotone" dataKey="limited" name="Blocked" stroke="var(--warn)" strokeWidth={2} fill="url(#rl-lim)" isAnimationActive={false} />
+
+            <CartesianGrid
+              stroke="var(--border-soft)"
+              vertical={false}
+            />
+
+            <XAxis
+              dataKey="time"
+              stroke="var(--text-faint)"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={30}
+            />
+
+            <YAxis
+              stroke="var(--text-faint)"
+              fontSize={10}
+              tickLine={false}
+              axisLine={false}
+              width={30}
+            />
+
+            <Tooltip
+              content={<ChartTooltip />}
+            />
+
+            <Area
+              type="monotone"
+              dataKey="limited"
+              name="Blocked"
+              stroke="var(--warn)"
+              strokeWidth={2}
+              fill="url(#rl-lim)"
+              isAnimationActive={false}
+            />
           </AreaChart>
         </ResponsiveContainer>
       </SectionCard>

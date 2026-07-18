@@ -1,10 +1,10 @@
 import React, { createContext, useContext } from "react";
-import { useMockEngine } from "../hooks/useMockEngine.js";
+import { useLiveEngine } from "../hooks/useLiveEngine.js";
 
 const EngineContext = createContext(null);
 
 export function EngineProvider({ children }) {
-  const engine = useMockEngine();
+  const engine = useLiveEngine();
   return <EngineContext.Provider value={engine}>{children}</EngineContext.Provider>;
 }
 

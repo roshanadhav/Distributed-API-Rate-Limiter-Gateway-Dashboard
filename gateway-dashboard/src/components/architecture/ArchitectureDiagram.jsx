@@ -8,16 +8,45 @@ import { clamp } from "../../lib/utils.js";
 const NODE_ICON = { client: Wifi, gateway: Waypoints, hub: CircleDot };
 
 export default function ArchitectureDiagram({ selected, onSelect }) {
-  const { services } = useEngine();
+  const { services, loadBalancer, gatewayDetails } = useEngine();
   const navigate = useNavigate();
   const svgRef = useRef(null);
+
+  const nodesWithLiveLabels = useMemo(
+    () =>
+      ARCH_STATIC_NODES.map((n) => {
+        if (n.id === "loadbalancer") return { ...n, sub: loadBalancer?.algorithm || n.sub };
+        if (n.id === "ratelimiter") return { ...n, sub: gatewayDetails?.rateLimiter?.algorithm || n.sub };
+        if (n.id === "gateway") return { ...n, sub: gatewayDetails?.config?.gatewayName || n.sub };
+        return n;
+      }),
+    [loadBalancer, gatewayDetails]
+  );
 
   const [positions, setPositions] = useState(() => {
     const p = {};
     ARCH_STATIC_NODES.forEach((n) => (p[n.id] = { x: n.x, y: n.y }));
-    services.forEach((s) => (p[s.id] = { x: ARCH_SERVICE_X[s.id] || 500, y: 560 }));
+    services.forEach((s, i) => (p[s.id] = { x: ARCH_SERVICE_X[s.id] ?? 130 + i * 160, y: 560 }));
     return p;
   });
+
+  // Services arrive asynchronously (first poll resolves after mount) — make
+  // sure any service without a known position gets one instead of being
+  // silently dropped from the diagram.
+  useEffect(() => {
+    setPositions((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      services.forEach((s, i) => {
+        if (!next[s.id]) {
+          next[s.id] = { x: ARCH_SERVICE_X[s.id] ?? 130 + i * 160, y: 560 };
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [services]);
+
   const [dragId, setDragId] = useState(null);
   const dragMoved = useRef(false);
   const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 1000, h: 630 });
@@ -126,7 +155,7 @@ export default function ArchitectureDiagram({ selected, onSelect }) {
           );
         })}
 
-        {ARCH_STATIC_NODES.map((n) => {
+        {nodesWithLiveLabels.map((n) => {
           const pos = positions[n.id];
           const Icon = NODE_ICON[n.type];
           const isSel = selected === n.id;

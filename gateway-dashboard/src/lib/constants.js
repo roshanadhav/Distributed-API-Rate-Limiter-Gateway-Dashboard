@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Network, Waypoints, Boxes, Scale, Gauge, HeartPulse,
-  ScrollText, Bell, Users as UsersIcon, Settings as SettingsIcon,
+  ScrollText, Bell, Settings as SettingsIcon,
   CheckCircle2, AlertTriangle, XCircle, PowerOff, Server, Lock, ShieldAlert,
 } from "lucide-react";
 
@@ -9,6 +9,18 @@ export const STATUS_META = {
   warning: { color: "var(--warn)", badge: "warning", label: "Warning", Icon: AlertTriangle },
   down: { color: "var(--danger)", badge: "down", label: "Down", Icon: XCircle },
   disabled: { color: "var(--text-faint)", badge: "neutral", label: "Disabled", Icon: PowerOff },
+};
+
+// Maps a solid accent CSS-variable reference to its pre-defined soft/tinted
+// background variant. Used instead of string-concatenating an alpha suffix
+// onto a var() reference (e.g. `${tint}1F`), which produces an invalid CSS
+// value like "var(--success)1F" that browsers silently ignore.
+export const TINT_SOFT = {
+  "var(--accent)": "var(--accent-soft)",
+  "var(--accent-2)": "var(--accent-2-soft)",
+  "var(--success)": "var(--success-soft)",
+  "var(--warn)": "var(--warn-soft)",
+  "var(--danger)": "var(--danger-soft)",
 };
 
 export const GROUP_ICON = {
@@ -27,23 +39,8 @@ export const NAV_ITEMS = [
   { id: "healthchecker", label: "Health Checker", path: "/healthchecker", Icon: HeartPulse },
   { id: "logs", label: "Logs", path: "/logs", Icon: ScrollText },
   { id: "notifications", label: "Notifications", path: "/notifications", Icon: Bell },
-  { id: "users", label: "Users", path: "/users", Icon: UsersIcon },
   { id: "settings", label: "Settings", path: "/settings", Icon: SettingsIcon },
 ];
-
-export const PAGE_META = {
-  overview: { title: "Overview", sub: "Executive summary of gateway health, traffic, and incidents." },
-  architecture: { title: "Architecture", sub: "Live topology of the distributed gateway. Double-click a node to inspect it." },
-  gateway: { title: "Gateway", sub: "Edge routing performance for api.gateway.internal" },
-  services: { title: "Services", sub: "Manage backend service groups and their instances." },
-  loadbalancer: { title: "Load Balancer", sub: "Traffic distribution engine and algorithm configuration." },
-  ratelimiter: { title: "Rate Limiter", sub: "Request throttling engine and algorithm configuration." },
-  healthchecker: { title: "Health Checker", sub: "Continuous liveness and readiness probing." },
-  logs: { title: "Logs", sub: "Real-time structured log stream from the gateway fleet." },
-  notifications: { title: "Notifications", sub: "Incidents, warnings, and informational alerts." },
-  users: { title: "Users", sub: "Administrators and access roles for this gateway." },
-  settings: { title: "Settings", sub: "Admin controls and system configuration." },
-};
 
 export const LB_ALGORITHMS = [
   { id: "round-robin", name: "Round Robin", useCase: "Uniform workloads with identically sized instances.", advantages: ["Simple to implement", "Predictable, even rotation", "No state to track"], disadvantages: ["Ignores real instance load", "Poor fit for uneven capacity"], performance: "Good", visual: "cycle" },
@@ -62,21 +59,24 @@ export const RL_ALGORITHMS = [
   { id: "leaky-bucket", name: "Leaky Bucket", desc: "Requests queue into a bucket that leaks out at a constant rate, smoothing traffic.", pro: "Produces a perfectly smooth outbound rate.", con: "Queuing adds latency; bucket overflow drops requests." },
 ];
 
+// Static layout for the architecture diagram. `sub` is a fallback label —
+// the Load Balancer / Rate Limiter nodes are re-labeled at render time with
+// the *real* algorithm name once live data has loaded.
 export const ARCH_STATIC_NODES = [
   { id: "client", label: "Client", sub: "Public internet", type: "client", x: 500, y: 40 },
-  { id: "gateway", label: "API Gateway", sub: "api.gateway.internal", type: "gateway", x: 500, y: 140 },
+  { id: "gateway", label: "API Gateway", sub: "MindEdix Gateway", type: "gateway", x: 500, y: 140 },
   { id: "healthchecker", label: "Health Checker", sub: "Liveness / readiness", type: "hub", x: 500, y: 240 },
-  { id: "loadbalancer", label: "Load Balancer", sub: "Round robin", type: "hub", x: 500, y: 340 },
-  { id: "ratelimiter", label: "Rate Limiter", sub: "Token bucket", type: "hub", x: 500, y: 440 },
+  { id: "loadbalancer", label: "Load Balancer", sub: "…", type: "hub", x: 500, y: 340 },
+  { id: "ratelimiter", label: "Rate Limiter", sub: "…", type: "hub", x: 500, y: 440 },
 ];
 
+// x-position for each real service id in the topology diagram.
 export const ARCH_SERVICE_X = {
-  "user-service-1": 130,
+  "user-service": 130,
   "user-service-2": 270,
   "user-service-3": 410,
-  "auth-service-1": 560,
-  "auth-service-2": 700,
-  "admin-service-1": 860,
+  "auth-service": 610,
+  "admin-1": 830,
 };
 
 export const NODE_PAGE_MAP = {

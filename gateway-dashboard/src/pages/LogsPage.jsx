@@ -3,6 +3,7 @@ import { Search, ArrowDownToLine } from "lucide-react";
 import { useEngine } from "../context/EngineContext.jsx";
 
 const LEVEL_COLOR = { INFO: "var(--accent-2)", SUCCESS: "var(--success)", WARNING: "var(--warn)", ERROR: "var(--danger)" };
+const LEVEL_SOFT = { INFO: "var(--accent-2-soft)", SUCCESS: "var(--success-soft)", WARNING: "var(--warn-soft)", ERROR: "var(--danger-soft)" };
 
 export default function LogsPage() {
   const { logs } = useEngine();
@@ -26,9 +27,9 @@ export default function LogsPage() {
       <div className="gw-page-head">
         <div>
           <div className="gw-page-title">Logs</div>
-          <div className="gw-page-sub">Real-time structured log stream from the gateway fleet.</div>
+          <div className="gw-page-sub">Events derived from live health/status changes detected between gateway polls (no log-streaming endpoint is available yet).</div>
         </div>
-        <span className="gw-badge healthy">Streaming</span>
+        <span className="gw-badge healthy">Live</span>
       </div>
 
       <div className="gw-card gw-card-pad" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -44,7 +45,7 @@ export default function LogsPage() {
               className="gw-badge"
               style={{
                 cursor: "pointer",
-                background: levels.includes(lvl) ? `${LEVEL_COLOR[lvl]}20` : "var(--surface-2)",
+                background: levels.includes(lvl) ? LEVEL_SOFT[lvl] : "var(--surface-2)",
                 color: levels.includes(lvl) ? LEVEL_COLOR[lvl] : "var(--text-faint)",
                 border: `1px solid ${levels.includes(lvl) ? "transparent" : "var(--border)"}`,
               }}

@@ -1,44 +1,64 @@
 import React, { useState } from "react";
-import { Play, RotateCcw, MoreVertical } from "lucide-react";
+import { RefreshCw, Save } from "lucide-react";
 import { useEngine } from "../context/EngineContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import SectionCard from "../components/ui/SectionCard.jsx";
 import Toast from "../components/ui/Toast.jsx";
-import { LB_ALGORITHMS, RL_ALGORITHMS } from "../lib/constants.js";
+import { LoadingState, UnreachableState } from "../components/ui/ConnectionState.jsx";
+import { API_BASE_URL, POLL_INTERVAL_MS } from "../config.js";
 
 export default function SettingsPage() {
-  const { lbAlgorithm, rlAlgorithm, setServices, services } = useEngine();
+  const { gatewayDetails, services, connection, connectionError, refreshNow, lastUpdated } = useEngine();
   const { theme, toggleTheme } = useTheme();
   const [toast, setToast] = useState(null);
+  const [apiBaseInput, setApiBaseInput] = useState(API_BASE_URL);
 
   const flash = (msg) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2200);
+    setTimeout(() => setToast(null), 2400);
   };
 
-  const triggerHealthCheck = () => {
-    flash("Health check triggered across all services");
-    setServices((prev) => prev.map((s) => ({ ...s, lastCheck: new Date() })));
+  const saveApiBase = () => {
+    const cleaned = apiBaseInput.trim().replace(/\/$/, "");
+    if (!cleaned) return;
+    window.localStorage.setItem("apexgw:apiBase", cleaned);
+    flash("API base URL saved — reloading…");
+    setTimeout(() => window.location.reload(), 600);
   };
+
+  if (connection === "connecting" && !gatewayDetails) return <LoadingState />;
+  if (connection === "error" && !gatewayDetails) return <UnreachableState onRetry={refreshNow} error={connectionError} />;
+
+  const { config, loadBalancer, rateLimiter } = gatewayDetails || {};
 
   return (
     <div>
       <div className="gw-page-head">
         <div>
           <div className="gw-page-title">Settings</div>
-          <div className="gw-page-sub">Admin controls and system configuration.</div>
+          <div className="gw-page-sub">Live gateway configuration and dashboard connection settings.</div>
         </div>
+        <button className="gw-btn primary" onClick={refreshNow}><RefreshCw size={13} />Refresh now</button>
       </div>
 
       <div className="gw-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 16 }}>
-        <SectionCard eyebrow="Admin Controls" title="Quick Actions">
+        <SectionCard eyebrow="Dashboard" title="Connection">
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 12.8, fontWeight: 600 }}>Trigger health check</div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Run an immediate probe across every instance.</div>
+            <div>
+              <div style={{ fontSize: 12.8, fontWeight: 600, marginBottom: 4 }}>API base URL</div>
+              <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 8 }}>
+                Every request in this app is built from this single value (see <span className="gw-mono">src/config.js</span>). Change it here to point the whole dashboard at a different host — no other file needs editing.
               </div>
-              <button className="gw-btn sm primary" onClick={triggerHealthCheck}><Play size={12} />Run</button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={apiBaseInput}
+                  onChange={(e) => setApiBaseInput(e.target.value)}
+                  className="gw-mono"
+                  style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", color: "var(--text)", fontSize: 12.5, outline: "none" }}
+                  placeholder="http://localhost:3000"
+                />
+                <button className="gw-btn sm primary" onClick={saveApiBase}><Save size={12} />Save & reload</button>
+              </div>
             </div>
             <hr className="gw-divider" />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -51,84 +71,43 @@ export default function SettingsPage() {
             <hr className="gw-divider" />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 12.8, fontWeight: 600 }}>Reset all instances to healthy</div>
-                <div style={{ fontSize: 11, color: "var(--text-faint)" }}>Clears warning/down state across the fleet.</div>
+                <div style={{ fontSize: 12.8, fontWeight: 600 }}>Poll interval</div>
+                <div style={{ fontSize: 11, color: "var(--text-faint)" }}>How often the dashboard re-fetches the four admin endpoints.</div>
               </div>
-              <button
-                className="gw-btn sm ghost"
-                onClick={() => {
-                  setServices((prev) => prev.map((s) => ({ ...s, status: "healthy" })));
-                  flash("All instances reset to healthy");
-                }}
-              >
-                <RotateCcw size={12} />
-                Reset
-              </button>
+              <span className="gw-mono" style={{ fontSize: 12.5 }}>{POLL_INTERVAL_MS / 1000}s</span>
+            </div>
+            <hr className="gw-divider" />
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12.8, fontWeight: 600 }}>Last synced</div>
+              <span className="gw-mono" style={{ fontSize: 12.5 }}>{lastUpdated ? lastUpdated.toLocaleTimeString("en-US", { hour12: false }) : "—"}</span>
             </div>
           </div>
         </SectionCard>
 
-        <SectionCard eyebrow="System Configuration" title="Current Configuration">
+        <SectionCard eyebrow="Gateway" title="Live Configuration">
           <div style={{ display: "flex", flexDirection: "column", gap: 9, fontSize: 12.5 }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>Load balancing algorithm</span>
-              <span className="gw-mono">{LB_ALGORITHMS.find((a) => a.id === lbAlgorithm).name}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>Rate limiting algorithm</span>
-              <span className="gw-mono">{RL_ALGORITHMS.find((a) => a.id === rlAlgorithm).name}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>Health check interval</span>
-              <span className="gw-mono">5s</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>Registered services</span>
-              <span className="gw-mono">{services.length}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>Gateway region</span>
-              <span className="gw-mono">us-east-1</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "var(--text-dim)" }}>TLS</span>
-              <span className="gw-badge healthy">Enabled</span>
-            </div>
+            <Row label="Gateway name" value={config?.gatewayName || "—"} />
+            <Row label="Version" value={config?.version || "—"} />
+            <Row label="Environment" value={config?.environment || "—"} />
+            <Row label="Started at" value={config?.startedAt ? new Date(config.startedAt).toLocaleString() : "—"} />
+            <Row label="Load balancing algorithm" value={loadBalancer?.algorithm || "—"} />
+            <Row label="Rate limiting algorithm" value={rateLimiter?.algorithm || "—"} />
+            <Row label="Rate limit" value={rateLimiter ? `${rateLimiter.default_limit} req / ${rateLimiter.window_seconds}s` : "—"} />
+            <Row label="Registered services" value={String(services.length)} />
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard eyebrow="Access" title="API Keys">
-        <table className="gw-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Prefix</th>
-              <th>Scope</th>
-              <th>Created</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>CI/CD Pipeline</td>
-              <td className="gw-mono">agw_live_4f2a…</td>
-              <td>Read/Write</td>
-              <td style={{ color: "var(--text-dim)" }}>Mar 2, 2026</td>
-              <td><MoreVertical size={14} color="var(--text-faint)" /></td>
-            </tr>
-            <tr>
-              <td>Grafana Exporter</td>
-              <td className="gw-mono">agw_live_9c1d…</td>
-              <td>Read Only</td>
-              <td style={{ color: "var(--text-dim)" }}>Jan 18, 2026</td>
-              <td><MoreVertical size={14} color="var(--text-faint)" /></td>
-            </tr>
-          </tbody>
-        </table>
-      </SectionCard>
-
       <Toast message={toast} />
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between" }}>
+      <span style={{ color: "var(--text-dim)" }}>{label}</span>
+      <span className="gw-mono">{value}</span>
     </div>
   );
 }

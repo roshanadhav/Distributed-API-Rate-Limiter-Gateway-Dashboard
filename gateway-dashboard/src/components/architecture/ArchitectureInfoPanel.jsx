@@ -6,13 +6,24 @@ import StatusBadge from "../ui/StatusBadge.jsx";
 import { ARCH_STATIC_NODES, NODE_PAGE_MAP } from "../../lib/constants.js";
 
 export default function ArchitectureInfoPanel({ selected }) {
-  const { services } = useEngine();
+  const { services, loadBalancer, gatewayDetails } = useEngine();
   const navigate = useNavigate();
+
+  const staticNodes = useMemo(
+    () =>
+      ARCH_STATIC_NODES.map((n) => {
+        if (n.id === "loadbalancer") return { ...n, sub: loadBalancer?.algorithm || n.sub };
+        if (n.id === "ratelimiter") return { ...n, sub: gatewayDetails?.rateLimiter?.algorithm || n.sub };
+        if (n.id === "gateway") return { ...n, sub: gatewayDetails?.config?.gatewayName || n.sub };
+        return n;
+      }),
+    [loadBalancer, gatewayDetails]
+  );
 
   const info = useMemo(() => {
     if (services.some((s) => s.id === selected)) return services.find((s) => s.id === selected);
-    return ARCH_STATIC_NODES.find((n) => n.id === selected);
-  }, [selected, services]);
+    return staticNodes.find((n) => n.id === selected);
+  }, [selected, services, staticNodes]);
 
   const openPage = () => {
     if (!info) return;
@@ -37,7 +48,7 @@ export default function ArchitectureInfoPanel({ selected }) {
               <div>RPS · {info.rps}</div>
               <div>Latency · {info.latency}ms</div>
               <div>CPU · {info.cpu}%</div>
-              <div>Zone · {info.zone}</div>
+              <div>Active conn. · {info.activeConnections}</div>
             </div>
           )}
           <button className="gw-btn primary sm" style={{ width: "100%", justifyContent: "center" }} onClick={openPage}>

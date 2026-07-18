@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { TINT_SOFT } from "../../lib/constants.js";
 
 export default function StatCard({ icon: Icon, label, value, unit, delta, deltaDir, tint = "var(--accent)" }) {
   return (
@@ -11,7 +12,7 @@ export default function StatCard({ icon: Icon, label, value, unit, delta, deltaD
     >
       <div className="top">
         <span className="label">{label}</span>
-        <span className="icon-wrap" style={{ background: `${tint}1F`, color: tint }}>
+        <span className="icon-wrap" style={{ background: TINT_SOFT[tint] || "var(--surface-2)", color: tint }}>
           <Icon size={15} />
         </span>
       </div>

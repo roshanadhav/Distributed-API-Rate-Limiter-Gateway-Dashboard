@@ -13,7 +13,6 @@ import RateLimiterPage from "./pages/RateLimiterPage.jsx";
 import HealthCheckerPage from "./pages/HealthCheckerPage.jsx";
 import LogsPage from "./pages/LogsPage.jsx";
 import NotificationsPage from "./pages/NotificationsPage.jsx";
-import UsersPage from "./pages/UsersPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 
 export default function App() {
@@ -33,7 +32,6 @@ export default function App() {
             <Route path="/healthchecker" element={<HealthCheckerPage />} />
             <Route path="/logs" element={<LogsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/users" element={<UsersPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/overview" replace />} />
           </Route>

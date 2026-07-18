@@ -17,9 +17,10 @@ class HealthChecker {
 
     for (const service of Object.values(serverConfig)) {
       for (const server of service.instances) {
+
+        const previousStatus = runtime[server.id]?.status || server.status || "UNKNOWN";
         try {
           const start = Date.now();
-
           const { data } = await axios.get(`${server.url}/health`, {
             timeout: 3000,
           });

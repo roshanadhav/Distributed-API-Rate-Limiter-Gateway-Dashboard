@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip,
 } from "recharts";
 import {
-  Activity, Database, Zap, Timer, AlertTriangle, Boxes, Filter, RefreshCw, CheckCircle2,
+  Activity, Database, Zap, Timer, AlertTriangle, Boxes, RefreshCw, CheckCircle2,
 } from "lucide-react";
 import { useEngine } from "../context/EngineContext.jsx";
 import StatCard from "../components/ui/StatCard.jsx";
@@ -14,13 +14,12 @@ import StatusBadge from "../components/ui/StatusBadge.jsx";
 import ChartTooltip from "../components/ui/ChartTooltip.jsx";
 import { GROUP_ICON } from "../lib/constants.js";
 import { fmtCompact, fmtNum } from "../lib/utils.js";
+import { formatDuration, sanitizeMetric } from "../lib/mappers.js";
+import { LoadingState, UnreachableState } from "../components/ui/ConnectionState.jsx";
 
 export default function OverviewPage() {
-  const { services, metrics, totals, incidents } = useEngine();
+  const { services, history, overview, incidents, connection, connectionError, refreshNow, lastUpdated } = useEngine();
   const navigate = useNavigate();
-
-  const last = metrics[metrics.length - 1];
-  const errorRate = ((last.errors / last.rps) * 100).toFixed(2);
 
   const grouped = useMemo(() => {
     const g = {};
@@ -33,32 +32,41 @@ export default function OverviewPage() {
   const groupStatus = (list) =>
     list.some((s) => s.status === "down") ? "down" : list.some((s) => s.status === "warning") ? "warning" : "healthy";
 
+  if (connection === "connecting" && !overview) {
+    return <LoadingState />;
+  }
+  if (connection === "error" && !overview) {
+    return <UnreachableState onRetry={refreshNow} error={connectionError} />;
+  }
+
+  const avgLatency = sanitizeMetric(overview?.avgLatency);
+
   return (
     <div>
       <div className="gw-page-head">
         <div>
           <div className="gw-page-title">Overview</div>
-          <div className="gw-page-sub">Executive summary of gateway health, traffic, and incidents.</div>
+          <div className="gw-page-sub">
+            Executive summary of gateway health, traffic, and incidents.
+            {lastUpdated && <span className="gw-mono" style={{ color: "var(--text-faint)" }}> · updated {lastUpdated.toLocaleTimeString("en-US", { hour12: false })}</span>}
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button className="gw-btn ghost"><Filter size={13} />Last 1 hour</button>
-          <button className="gw-btn primary"><RefreshCw size={13} />Refresh</button>
-        </div>
+        <button className="gw-btn primary" onClick={refreshNow}><RefreshCw size={13} />Refresh now</button>
       </div>
 
       <div className="gw-grid" style={{ gridTemplateColumns: "repeat(6, 1fr)", marginBottom: 16 }}>
-        <StatCard icon={Activity} label="Uptime" value={totals.uptime.toFixed(3)} unit="%" tint="var(--success)" delta="0.004%" deltaDir="up" />
-        <StatCard icon={Database} label="Total Requests" value={fmtCompact(totals.totalRequests)} tint="var(--accent-2)" delta="12.4%" deltaDir="up" />
-        <StatCard icon={Zap} label="Requests / sec" value={fmtNum(last.rps)} tint="var(--accent)" delta="3.1%" deltaDir="up" />
-        <StatCard icon={Timer} label="Avg Latency" value={last.latency} unit="ms" tint="var(--accent-2)" delta="2.2%" deltaDir="down" />
-        <StatCard icon={AlertTriangle} label="Error Rate" value={errorRate} unit="%" tint="var(--danger)" delta="0.3%" deltaDir="down" />
-        <StatCard icon={Boxes} label="Active Services" value={`${services.filter((s) => s.status !== "down").length}/${services.length}`} tint="var(--success)" />
+        <StatCard icon={Activity} label="Gateway Uptime" value={formatDuration(overview?.uptime)} tint="var(--success)" />
+        <StatCard icon={Database} label="Total Requests" value={fmtCompact(overview?.totalRequests ?? 0)} tint="var(--accent-2)" />
+        <StatCard icon={Zap} label="Requests / sec" value={fmtNum(Math.round(overview?.requestsPerSecond ?? 0))} tint="var(--accent)" />
+        <StatCard icon={Timer} label="Avg Latency" value={avgLatency ?? "—"} unit={avgLatency != null ? "ms" : ""} tint="var(--accent-2)" />
+        <StatCard icon={AlertTriangle} label="Error Rate" value={Number(overview?.errorRate ?? 0).toFixed(2)} unit="%" tint="var(--danger)" />
+        <StatCard icon={Boxes} label="Active Services" value={`${overview?.activeServices ?? services.filter((s) => s.status !== "down").length}/${services.length}`} tint="var(--success)" />
       </div>
 
       <div className="gw-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 16 }}>
         <SectionCard eyebrow="Traffic" title="Request Volume">
           <ResponsiveContainer width="100%" height={190}>
-            <AreaChart data={metrics}>
+            <AreaChart data={history}>
               <defs>
                 <linearGradient id="ov-rps" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.4} />
@@ -73,9 +81,9 @@ export default function OverviewPage() {
             </AreaChart>
           </ResponsiveContainer>
         </SectionCard>
-        <SectionCard eyebrow="Performance" title="Latency (p95)">
+        <SectionCard eyebrow="Performance" title="Average Latency">
           <ResponsiveContainer width="100%" height={190}>
-            <LineChart data={metrics}>
+            <LineChart data={history}>
               <CartesianGrid stroke="var(--border-soft)" vertical={false} />
               <XAxis dataKey="time" stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} minTickGap={30} />
               <YAxis stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} width={36} />
@@ -87,9 +95,9 @@ export default function OverviewPage() {
       </div>
 
       <div className="gw-grid" style={{ gridTemplateColumns: "1fr 1fr", marginBottom: 16 }}>
-        <SectionCard eyebrow="Reliability" title="Error Rate">
+        <SectionCard eyebrow="Reliability" title="Failed Requests (per poll interval)">
           <ResponsiveContainer width="100%" height={150}>
-            <AreaChart data={metrics}>
+            <AreaChart data={history}>
               <defs>
                 <linearGradient id="ov-err" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--danger)" stopOpacity={0.4} />
@@ -100,13 +108,13 @@ export default function OverviewPage() {
               <XAxis dataKey="time" stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} minTickGap={30} />
               <YAxis stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} width={30} />
               <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="errors" name="Errors" stroke="var(--danger)" strokeWidth={2} fill="url(#ov-err)" isAnimationActive={false} />
+              <Area type="monotone" dataKey="errors" name="Failed" stroke="var(--danger)" strokeWidth={2} fill="url(#ov-err)" isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </SectionCard>
-        <SectionCard eyebrow="Throttling" title="Rate Limited Requests">
+        <SectionCard eyebrow="Throttling" title="Rate Limited (per poll interval)">
           <ResponsiveContainer width="100%" height={150}>
-            <BarChart data={metrics}>
+            <BarChart data={history}>
               <CartesianGrid stroke="var(--border-soft)" vertical={false} />
               <XAxis dataKey="time" stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} minTickGap={30} />
               <YAxis stroke="var(--text-faint)" fontSize={10} tickLine={false} axisLine={false} width={30} />
@@ -119,7 +127,7 @@ export default function OverviewPage() {
 
       <div style={{ marginBottom: 16 }}>
         <div className="gw-eyebrow" style={{ marginBottom: 10 }}>Service Health</div>
-        <div className="gw-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div className="gw-grid" style={{ gridTemplateColumns: `repeat(${Math.max(Object.keys(grouped).length, 1)}, 1fr)` }}>
           {Object.entries(grouped).map(([group, list]) => {
             const status = groupStatus(list);
             const GIcon = GROUP_ICON[group] || Boxes;
@@ -132,7 +140,7 @@ export default function OverviewPage() {
                     </span>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: 13.5 }}>{group}</div>
-                      <div className="gw-mono" style={{ fontSize: 10.5, color: "var(--text-faint)" }}>{list.length} instances</div>
+                      <div className="gw-mono" style={{ fontSize: 10.5, color: "var(--text-faint)" }}>{list.length} instance{list.length === 1 ? "" : "s"}</div>
                     </div>
                   </div>
                   <StatusBadge status={status} />
@@ -158,9 +166,9 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      <SectionCard eyebrow="Incidents" title="Recent Incidents" right={<span className="gw-mono" style={{ fontSize: 11, color: "var(--text-faint)" }}>{incidents.length} total</span>}>
+      <SectionCard eyebrow="Incidents" title="Recent Incidents" right={<span className="gw-mono" style={{ fontSize: 11, color: "var(--text-faint)" }}>{overview?.recentIncidents ?? incidents.length} reported by gateway</span>}>
         {incidents.length === 0 ? (
-          <div style={{ padding: 20, textAlign: "center", color: "var(--text-faint)", fontSize: 12.5 }}>No incidents recorded. The fleet is healthy.</div>
+          <div style={{ padding: 20, textAlign: "center", color: "var(--text-faint)", fontSize: 12.5 }}>No status transitions observed yet this session.</div>
         ) : (
           <div>
             {incidents.slice(0, 5).map((inc) => (

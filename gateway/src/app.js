@@ -3,8 +3,8 @@ import axios from "axios";
 import rateLimiter from "./middleware/ratelimiter.middleware.js";
 import client from "../utils/radis.connection.js";
 import LoadBalancer from "./services/loadBalancer/index.js";
-import { onRequest ,onSuccess , onFailure , updateLatency, updateStatus} from "./middleware/middleware.js";
-
+import { onRequest ,onSuccess , onFailure , updateLatency, updateStatus , updateTraffic} from "./middleware/middleware.js";
+import cors from 'cors'
 client.on("error", (err) => console.log(err));
 
 await client
@@ -19,7 +19,9 @@ const loadBalancer = new LoadBalancer();
 loadBalancer.healthChecker.start();
 
 const app = express();
-
+app.use(cors({
+  origin : "*"
+})) ;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -168,8 +170,8 @@ app.use(rateLimiter, async (req, res) => {
     const responseTime = Date.now() - start;
     await onFailure(responseTime);
     await updateLatency(responseTime);
-    await updateTraffic(req, response);
-    await updateStatus(response.status) ; 
+    await updateTraffic(req, err.response);
+    await updateStatus(err.response?.status || 500);
     server.failedRequests++;
     server.activeConnections--;
 

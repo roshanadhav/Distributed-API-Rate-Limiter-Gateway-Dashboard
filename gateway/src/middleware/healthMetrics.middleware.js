@@ -36,9 +36,9 @@ export const updateGatewayHealth = async (runtime) => {
 
         const health = await getGatewayHealth();
 
-        health.total_checks++;
+        // health.total_checks++;
 
-        health.last_check = Date.now();
+        // health.last_check = Date.now();
 
         let healthy = 0;
         let unhealthy = 0;
@@ -57,10 +57,10 @@ export const updateGatewayHealth = async (runtime) => {
 
         }
 
-        health.healthy_services = healthy;
-        health.unhealthy_services = unhealthy;
+        // health.healthy_services = healthy;
+        // health.unhealthy_services = unhealthy;
 
-        health.failed_checks += unhealthy;
+        // health.failed_checks += unhealthy;
 
         await saveGatewayHealth(health);
 
