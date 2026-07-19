@@ -1,4 +1,4 @@
-# Apex Gateway — Distributed API Gateway Control Center
+# Gateway — Distributed API Gateway Control Center
 
 A React dashboard for the **MindEdix Gateway** (or any gateway exposing the same admin API). All data on screen is live — polled from real HTTP endpoints on an interval — there is no mock/simulated data anywhere in this build.
 

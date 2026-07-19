@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Apex Gateway — a distributed API gateway management platform (enterprise SRE/DevOps monitoring UI) with simulated live data.",
+  "description": "Gateway — a distributed API gateway management platform (enterprise SRE/DevOps monitoring UI) with simulated live data.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

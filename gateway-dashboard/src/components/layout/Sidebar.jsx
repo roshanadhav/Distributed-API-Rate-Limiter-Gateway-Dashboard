@@ -7,9 +7,9 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   return (
     <div className={`gw-sidebar ${collapsed ? "collapsed" : ""}`} style={{ width: collapsed ? 68 : 224 }}>
       <div className="gw-sidebar-logo">
-        <div className="gw-logo-mark">AG</div>
+        <div className="gw-logo-mark">$</div>
         <div>
-          <div className="gw-logo-text">Apex Gateway</div>
+          <div className="gw-logo-text">Gateway</div>
           <div className="gw-logo-sub">CONTROL CENTER</div>
         </div>
       </div>
