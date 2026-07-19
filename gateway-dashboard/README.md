@@ -64,6 +64,7 @@ Since the gateway's API only reports **current values** (not a time series), the
 - `minLatency` (and similar fields) sometimes come back as `Number.MAX_SAFE_INTEGER` as a "no data yet" sentinel — `sanitizeMetric()` converts that to `null` so the UI shows "—" instead of a 16-digit number.
 - Requests/sec per service isn't provided directly, so it's derived client-side from the delta in `totalRequests` between two polls, divided by elapsed seconds.
 
+
 ## Project structure
 
 ```
